@@ -106,7 +106,8 @@ jobs:
       shell: pwsh
       run: |
         Write-Host "Building module with version: $env:buildVer" -ForegroundColor Green
-        .\build.ps1    
+        .\build.ps1
+    
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -117,7 +118,10 @@ jobs:
   deploy:
     needs: [test, build]
     runs-on: windows-latest
-    if: github.event_name == 'release'
+    # TODO: Implement proper release tagging in the future
+    # For now, deploy runs on every push to main/master for testing
+    # Later: if: github.event_name == 'release'
+    if: github.event_name != 'pull_request'
     
     steps:
     - name: Checkout code
@@ -134,7 +138,16 @@ jobs:
       id: version
       shell: pwsh
       run: |
-        $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
+        # TODO: Update this when implementing proper release tagging
+        # For now, use the same logic as build job
+        if ($env:GITHUB_EVENT_NAME -eq 'release') {
+          $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
+        } else {
+          # Get version from manifest and append build number
+          $manifest = Import-PowerShellDataFile -Path ".\SPSMonday\SPSMonday.psd1"
+          $baseVersion = $manifest.ModuleVersion -replace '<ModuleVersion>', '1.0.0'
+          $version = "$baseVersion.$env:GITHUB_RUN_NUMBER"
+        }
         Write-Host "Deploy Version: $version" -ForegroundColor Green
         echo "DEPLOY_VERSION=$version" >> $env:GITHUB_OUTPUT
         echo "buildVer=$version" >> $env:GITHUB_ENV
