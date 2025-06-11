@@ -22,8 +22,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    
+      uses: actions/checkout@v4    
     - name: Setup PowerShell
       shell: pwsh
       run: |
@@ -40,11 +39,20 @@ jobs:
       shell: pwsh
       run: |
         Write-Host "Testing module manifest..." -ForegroundColor Yellow
-        $manifest = Test-ModuleManifest -Path ".\SPSMonday\SPSMonday.psd1" -ErrorAction Stop
+        # Temporarily replace version placeholder for testing
+        $manifestPath = ".\SPSMonday\SPSMonday.psd1"
+        $manifestContent = Get-Content -Path $manifestPath -Raw
+        $testContent = $manifestContent -replace '<ModuleVersion>', '1.0.0'
+        $testContent | Set-Content -Path ".\SPSMonday\SPSMonday.test.psd1"
+        
+        $manifest = Test-ModuleManifest -Path ".\SPSMonday\SPSMonday.test.psd1" -ErrorAction Stop
         Write-Host "✓ Manifest is valid" -ForegroundColor Green
         Write-Host "  Module: $($manifest.Name)" -ForegroundColor Gray
         Write-Host "  Version: $($manifest.Version)" -ForegroundColor Gray
         Write-Host "  Functions: $($manifest.ExportedFunctions.Keys.Count)" -ForegroundColor Gray
+        
+        # Clean up test file
+        Remove-Item ".\SPSMonday\SPSMonday.test.psd1" -Force
     
     - name: Run PSScriptAnalyzer
       shell: pwsh
