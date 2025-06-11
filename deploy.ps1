@@ -22,11 +22,11 @@ Write-Host "WhatIf Mode: $WhatIf" -ForegroundColor Cyan
 
 # Set paths
 $moduleName = 'SPSMonday'
-$buildOutputPath = Join-Path -Path $PWD -ChildPath "BuildOutput\$moduleName"
+$modulePath = Join-Path -Path $PWD -ChildPath $moduleName
 
-# Verify build output exists
-if (!(Test-Path -Path $buildOutputPath)) {
-    Write-Error "Build output not found at: $buildOutputPath"
+# Verify module exists
+if (!(Test-Path -Path $modulePath)) {
+    Write-Error "Module not found at: $modulePath"
     Write-Host "Please run build.ps1 first" -ForegroundColor Yellow
     exit 1
 }
@@ -42,9 +42,8 @@ if ([string]::IsNullOrWhiteSpace($NuGetApiKey)) {
 Write-Host "Performing final validation..." -ForegroundColor Yellow
 
 try {
-    # Test module import one more time
-    Remove-Module $moduleName -Force -ErrorAction SilentlyContinue
-    $manifestPath = Join-Path -Path $buildOutputPath -ChildPath "$moduleName.psd1"
+    # Test module manifest
+    $manifestPath = Join-Path -Path $modulePath -ChildPath "$moduleName.psd1"
     $module = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
     
     Write-Host "✓ Module validation successful" -ForegroundColor Green
@@ -52,7 +51,6 @@ try {
     Write-Host "  Version: $($module.Version)" -ForegroundColor Gray
     Write-Host "  Author: $($module.Author)" -ForegroundColor Gray
     Write-Host "  Description: $($module.Description)" -ForegroundColor Gray
-    Write-Host "  Tags: $($module.Tags -join ', ')" -ForegroundColor Gray
     
     # Check if this version already exists
     Write-Host "Checking if version exists on PowerShell Gallery..." -ForegroundColor Yellow
@@ -79,7 +77,7 @@ Write-Host "Publishing module to PowerShell Gallery..." -ForegroundColor Yellow
 
 try {
     $publishParams = @{
-        Path = $buildOutputPath
+        Path = $modulePath
         NuGetApiKey = $NuGetApiKey
         Repository = $Repository
         Force = $true
