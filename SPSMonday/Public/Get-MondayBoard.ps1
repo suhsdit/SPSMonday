@@ -92,12 +92,8 @@ Function Get-MondayBoard {
         Write-Verbose -Message "Starting $($MyInvocation.InvocationName)..."
         Write-Verbose -Message "Parameters: Limit=$Limit, Page=$Page, State=$State"
     }
-    
-    Process {
+      Process {
         try {
-            # Build the GraphQL query
-            $queryParts = @()
-            
             # Add arguments
             $arguments = @()
             
