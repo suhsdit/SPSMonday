@@ -1,0 +1,158 @@
+name: Build and Deploy SPSMonday Module
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'SPSMonday/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'SPSMonday/**'
+  release:
+    types: [published]
+
+env:
+  MODULE_NAME: SPSMonday
+
+jobs:
+  test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup PowerShell
+      shell: pwsh
+      run: |
+        Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+        Write-Host "OS: $($PSVersionTable.OS)"
+    
+    - name: Install required modules
+      shell: pwsh
+      run: |
+        Install-Module -Name Pester -Force -SkipPublisherCheck
+        Install-Module -Name PSScriptAnalyzer -Force -SkipPublisherCheck
+    
+    - name: Run basic module tests
+      shell: pwsh
+      run: |
+        Write-Host "Running basic module tests..." -ForegroundColor Green
+        .\Test-SPSMondayModule.ps1
+    
+    - name: Run PSScriptAnalyzer
+      shell: pwsh
+      run: |
+        Write-Host "Running PSScriptAnalyzer..." -ForegroundColor Yellow
+        $results = Invoke-ScriptAnalyzer -Path ".\SPSMonday" -Recurse -Settings PSGallery
+        if ($results) {
+          Write-Host "PSScriptAnalyzer found issues:" -ForegroundColor Red
+          $results | Format-Table -AutoSize
+          exit 1
+        } else {
+          Write-Host "✓ PSScriptAnalyzer passed" -ForegroundColor Green
+        }
+    
+    - name: Test module manifest
+      shell: pwsh
+      run: |
+        Write-Host "Testing module manifest..." -ForegroundColor Yellow
+        $manifest = Test-ModuleManifest -Path ".\SPSMonday\SPSMonday.psd1" -ErrorAction Stop
+        Write-Host "✓ Manifest is valid" -ForegroundColor Green
+        Write-Host "  Module: $($manifest.Name)" -ForegroundColor Gray
+        Write-Host "  Version: $($manifest.Version)" -ForegroundColor Gray
+        Write-Host "  Functions: $($manifest.ExportedFunctions.Keys.Count)" -ForegroundColor Gray
+
+  build:
+    needs: test
+    runs-on: windows-latest
+    if: github.event_name != 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Determine version
+      id: version
+      shell: pwsh
+      run: |
+        if ($env:GITHUB_EVENT_NAME -eq 'release') {
+          $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
+        } else {
+          # Get version from manifest and append build number
+          $manifest = Import-PowerShellDataFile -Path ".\SPSMonday\SPSMonday.psd1"
+          $baseVersion = $manifest.ModuleVersion
+          $version = "$baseVersion.$env:GITHUB_RUN_NUMBER"
+        }
+        
+        Write-Host "Build Version: $version" -ForegroundColor Green
+        echo "BUILD_VERSION=$version" >> $env:GITHUB_OUTPUT
+        echo "BUILD_VERSION=$version" >> $env:GITHUB_ENV
+    
+    - name: Build module
+      shell: pwsh
+      run: |
+        Write-Host "Building module with version: $env:BUILD_VERSION" -ForegroundColor Green
+        .\build.ps1 -BuildVersion $env:BUILD_VERSION
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: SPSMonday-Module-${{ steps.version.outputs.BUILD_VERSION }}
+        path: BuildOutput/
+        retention-days: 30
+
+  deploy:
+    needs: [test, build]
+    runs-on: windows-latest
+    if: github.event_name == 'release'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: SPSMonday-Module-*
+        merge-multiple: true
+        path: BuildOutput/
+    
+    - name: Determine version
+      id: version
+      shell: pwsh
+      run: |
+        $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
+        Write-Host "Deploy Version: $version" -ForegroundColor Green
+        echo "DEPLOY_VERSION=$version" >> $env:GITHUB_OUTPUT
+        echo "DEPLOY_VERSION=$version" >> $env:GITHUB_ENV
+    
+    - name: Deploy to PowerShell Gallery
+      shell: pwsh
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: |
+        if ([string]::IsNullOrWhiteSpace($env:NUGET_API_KEY)) {
+          Write-Error "NUGET_API_KEY secret is not set"
+          exit 1
+        }
+        
+        Write-Host "Deploying to PowerShell Gallery..." -ForegroundColor Green
+        .\deploy.ps1 -NuGetApiKey $env:NUGET_API_KEY -BuildVersion $env:DEPLOY_VERSION
+    
+    - name: Create deployment summary
+      shell: pwsh
+      run: |
+        $moduleName = "SPSMonday"
+        $version = $env:DEPLOY_VERSION
+        
+        Write-Host "## Deployment Summary" >> $env:GITHUB_STEP_SUMMARY
+        Write-Host "- **Module**: $moduleName" >> $env:GITHUB_STEP_SUMMARY
+        Write-Host "- **Version**: $version" >> $env:GITHUB_STEP_SUMMARY
+        Write-Host "- **Repository**: PowerShell Gallery" >> $env:GITHUB_STEP_SUMMARY
+        Write-Host "- **Status**: ✅ Deployed Successfully" >> $env:GITHUB_STEP_SUMMARY
+        Write-Host "- **Install Command**: \`Install-Module -Name $moduleName\`" >> $env:GITHUB_STEP_SUMMARY
+        Write-Host "- **Gallery Link**: [View on PowerShell Gallery](https://www.powershellgallery.com/packages/$moduleName/$version)" >> $env:GITHUB_STEP_SUMMARY
