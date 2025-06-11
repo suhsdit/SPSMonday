@@ -72,8 +72,7 @@ jobs:
         if ($errors) {
           Write-Host "PSScriptAnalyzer found errors:" -ForegroundColor Red
           $errors | Format-Table -AutoSize
-          Write-Host "Errors must be fixed before proceeding." -ForegroundColor Red
-          exit 1
+          Write-Host "Errors must be fixed before proceeding." -ForegroundColor Red          exit 1
         } else {
           Write-Host "✓ PSScriptAnalyzer passed (no errors found)" -ForegroundColor Green
         }
@@ -83,11 +82,20 @@ jobs:
       run: |
         Write-Host "Testing module import..." -ForegroundColor Yellow
         try {
-          Import-Module .\SPSMonday\SPSMonday.psd1 -Force -ErrorAction Stop
+          # Temporarily replace version placeholder for testing
+          $manifestPath = ".\SPSMonday\SPSMonday.psd1"
+          $manifestContent = Get-Content -Path $manifestPath -Raw
+          $testContent = $manifestContent -replace '<ModuleVersion>', '1.0.0'
+          $testContent | Set-Content -Path ".\SPSMonday\SPSMonday.test.psd1"
+          
+          Import-Module .\SPSMonday\SPSMonday.test.psd1 -Force -ErrorAction Stop
           $functions = Get-Command -Module SPSMonday -CommandType Function
           Write-Host "✓ Module imported successfully" -ForegroundColor Green
           Write-Host "  Functions exported: $($functions.Count)" -ForegroundColor Gray
           Remove-Module SPSMonday -Force
+          
+          # Clean up test file
+          Remove-Item ".\SPSMonday\SPSMonday.test.psd1" -Force
         } catch {
           Write-Error "Module import failed: $_"
           exit 1
