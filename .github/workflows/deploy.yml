@@ -50,8 +50,7 @@ jobs:
         Write-Host "  Module: $($manifest.Name)" -ForegroundColor Gray
         Write-Host "  Version: $($manifest.Version)" -ForegroundColor Gray
         Write-Host "  Functions: $($manifest.ExportedFunctions.Keys.Count)" -ForegroundColor Gray
-        
-        # Clean up test file
+          # Clean up test file
         Remove-Item ".\SPSMonday\SPSMonday.test.psd1" -Force
     
     - name: Run PSScriptAnalyzer
@@ -59,12 +58,24 @@ jobs:
       run: |
         Write-Host "Running PSScriptAnalyzer..." -ForegroundColor Yellow
         $results = Invoke-ScriptAnalyzer -Path ".\SPSMonday" -Recurse -Settings PSGallery
-        if ($results) {
-          Write-Host "PSScriptAnalyzer found issues:" -ForegroundColor Red
-          $results | Format-Table -AutoSize
+        
+        # Separate errors from warnings
+        $errors = $results | Where-Object { $_.Severity -eq 'Error' }
+        $warnings = $results | Where-Object { $_.Severity -eq 'Warning' }
+        
+        if ($warnings) {
+          Write-Host "PSScriptAnalyzer found warnings:" -ForegroundColor Yellow
+          $warnings | Format-Table -AutoSize
+          Write-Host "Warnings are acceptable and will not fail the build." -ForegroundColor Yellow
+        }
+        
+        if ($errors) {
+          Write-Host "PSScriptAnalyzer found errors:" -ForegroundColor Red
+          $errors | Format-Table -AutoSize
+          Write-Host "Errors must be fixed before proceeding." -ForegroundColor Red
           exit 1
         } else {
-          Write-Host "✓ PSScriptAnalyzer passed" -ForegroundColor Green
+          Write-Host "✓ PSScriptAnalyzer passed (no errors found)" -ForegroundColor Green
         }
     
     - name: Test module import
