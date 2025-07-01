@@ -21,8 +21,6 @@ Function Get-MondayBoardDetail {
     Include board views
 .PARAMETER ItemsLimit
     Maximum number of items to retrieve (default: 100)
-.PARAMETER ItemsPage
-    Page number for items pagination (default: 1)
 .EXAMPLE
     Get-MondayBoardDetail -BoardId 1234567890
     
@@ -74,11 +72,7 @@ Function Get-MondayBoardDetail {
         
         [Parameter(Mandatory=$false)]
         [ValidateRange(1, 500)]
-        [Int]$ItemsLimit = 100,
-        
-        [Parameter(Mandatory=$false)]
-        [ValidateRange(1, [Int]::MaxValue)]
-        [Int]$ItemsPage = 1
+        [Int]$ItemsLimit = 100
     )
     
     Begin {
@@ -139,7 +133,7 @@ Function Get-MondayBoardDetail {
             }
             
             if ($IncludeItems) {
-                $itemsQuery = "items_page (limit: $ItemsLimit, page: $ItemsPage) { 
+                $itemsQuery = "items_page (limit: $ItemsLimit) { 
                     cursor
                     items { 
                         id 
@@ -160,7 +154,7 @@ Function Get-MondayBoardDetail {
                     } 
                 }"
                 $fields += $itemsQuery
-                Write-Verbose -Message "Including items with limit: $ItemsLimit, page: $ItemsPage"
+                Write-Verbose -Message "Including items with limit: $ItemsLimit"
             }
             
             if ($IncludeUpdates) {
