@@ -182,20 +182,3 @@ jobs:
           # Use specific version (for releases)
           .\deploy.ps1 -NuGetApiKey $env:NUGET_API_KEY -BuildVersion $env:buildVer
         }
-    
-    - name: Create deployment summary
-      shell: pwsh
-      run: |
-        $moduleName = "SPSMonday"
-        
-        # Get the actual deployed version from the manifest
-        $manifest = Test-ModuleManifest -Path ".\SPSMonday\SPSMonday.psd1"
-        $version = $manifest.Version.ToString()
-        
-        "Deployment Summary" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        "Module: $moduleName" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        "Version: $version" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        "Repository: PowerShell Gallery" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        "Status: ✅ Deployed Successfully" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        "Install Command: \`Install-Module -Name $moduleName\`" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        "GalleryLink: [View on PowerShell Gallery](https://www.powershellgallery.com/packages/$moduleName/$version)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
