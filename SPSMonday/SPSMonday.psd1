@@ -73,8 +73,11 @@ FunctionsToExport = @(  'Get-MondayBoard',
                         'Get-MondayBoardColumn',
                         'Get-MondayBoardDetail',
                         'Get-MondayBoardItem',
+                        'Get-MondayItem',
                         'Get-MondayUser',
+                        'New-MondayBoardItem',
                         'Set-MondayBoardItem',
+                        'Remove-MondayBoardItem',
                         'Invoke-MondayApi',
                         'New-SPSMondayConfiguration',
                         'Set-SPSMondayConfiguration',
@@ -139,6 +142,18 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
