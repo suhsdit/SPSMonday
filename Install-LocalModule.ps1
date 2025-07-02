@@ -113,6 +113,20 @@ try {
             $importedModule.ExportedCommands.Keys | Sort-Object | ForEach-Object {
                 Write-Host "  - $_" -ForegroundColor White
             }
+            
+            # Revert version back to 1.0.0 in the source manifest to avoid accidental commits
+            if ($BuildVersion -and $version.ToString() -ne "1.0.0") {
+                Write-Host "`nReverting source manifest version back to 1.0.0..." -ForegroundColor Yellow
+                try {
+                    $manifestContent = Get-Content -Path $manifestPath -Raw
+                    $manifestContent = $manifestContent -replace "ModuleVersion\s*=\s*'[^']*'", "ModuleVersion = '1.0.0'"
+                    $manifestContent | Set-Content -Path $manifestPath -Encoding UTF8
+                    Write-Host "✓ Source manifest version reverted to 1.0.0" -ForegroundColor Green
+                }
+                catch {
+                    Write-Warning "Failed to revert source manifest version: $_"
+                }
+            }
         }
         catch {
             Write-Warning "Module installed but failed to import: $_"
@@ -129,6 +143,21 @@ try {
 }
 catch {
     Write-Error "Installation failed: $_"
+    
+    # Revert version back to 1.0.0 in case of failure to avoid leaving modified version
+    if ($BuildVersion) {
+        Write-Host "`nReverting source manifest version back to 1.0.0 due to installation failure..." -ForegroundColor Yellow
+        try {
+            $manifestContent = Get-Content -Path $manifestPath -Raw
+            $manifestContent = $manifestContent -replace "ModuleVersion\s*=\s*'[^']*'", "ModuleVersion = '1.0.0'"
+            $manifestContent | Set-Content -Path $manifestPath -Encoding UTF8
+            Write-Host "✓ Source manifest version reverted to 1.0.0" -ForegroundColor Green
+        }
+        catch {
+            Write-Warning "Failed to revert source manifest version: $_"
+        }
+    }
+    
     Write-Host "`nTroubleshooting:" -ForegroundColor Yellow
     Write-Host "- Try running as Administrator for AllUsers scope" -ForegroundColor White
     Write-Host "- Check that PowerShell execution policy allows module installation" -ForegroundColor White
@@ -142,9 +171,14 @@ catch {
 .DESCRIPTION
     This script builds the module and installs it to your local PowerShell module path,
     making it available for import and testing without publishing to PowerShell Gallery.
+    
+    If a BuildVersion is specified, the script will update the manifest version for installation,
+    but will revert the source manifest back to 1.0.0 after successful installation to prevent
+    accidental commits of modified version numbers.
 
 .PARAMETER BuildVersion
     Optional version to build the module with. If not specified, uses current manifest version.
+    Note: After successful installation, the source manifest version will be reverted to 1.0.0.
 
 .PARAMETER Scope
     Installation scope: CurrentUser (default) or AllUsers (requires admin privileges).
