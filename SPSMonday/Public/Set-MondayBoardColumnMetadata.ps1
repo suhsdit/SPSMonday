@@ -50,7 +50,7 @@ Function Set-MondayBoardColumnMetadata {
             ValueFromPipeline=$true,
             ValueFromPipelineByPropertyName=$true,
             Position=0)]
-        [Alias('Id', 'ColumnID')]
+        [Alias('Id')]
         [String]$ColumnId,
         
         [Parameter(Mandatory=$true,
