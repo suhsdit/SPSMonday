@@ -91,22 +91,25 @@ jobs:
       run: |
         if ($env:GITHUB_EVENT_NAME -eq 'release') {
           $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
+          echo "BUILD_VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "buildVer=$version" >> $env:GITHUB_ENV
+          Write-Host "Build Version: $version" -ForegroundColor Green
         } else {
-          # Get version from manifest and append build number
-          $manifest = Import-PowerShellDataFile -Path ".\SPSMonday\SPSMonday.psd1"
-          $baseVersion = $manifest.ModuleVersion -replace '<ModuleVersion>', '1.0.0'
-          $version = "$baseVersion.$env:GITHUB_RUN_NUMBER"
+          # Use auto-increment versioning (will be determined by deploy.ps1)
+          Write-Host "Using auto-increment versioning (Patch bump)" -ForegroundColor Green
+          echo "BUILD_VERSION=auto" >> $env:GITHUB_OUTPUT
+          echo "buildVer=auto" >> $env:GITHUB_ENV
         }
-        
-        Write-Host "Build Version: $version" -ForegroundColor Green
-        echo "BUILD_VERSION=$version" >> $env:GITHUB_OUTPUT
-        echo "buildVer=$version" >> $env:GITHUB_ENV
     
     - name: Build module
       shell: pwsh
       run: |
-        Write-Host "Building module with version: $env:buildVer" -ForegroundColor Green
-        .\build.ps1
+        if ($env:buildVer -eq "auto") {
+          Write-Host "Auto-increment versioning will be handled by deploy.ps1" -ForegroundColor Green
+        } else {
+          Write-Host "Building module with version: $env:buildVer" -ForegroundColor Green
+          .\build.ps1 -BuildVersion $env:buildVer
+        }
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -142,21 +145,24 @@ jobs:
         # For now, use the same logic as build job
         if ($env:GITHUB_EVENT_NAME -eq 'release') {
           $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
+          echo "DEPLOY_VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "buildVer=$version" >> $env:GITHUB_ENV
         } else {
-          # Get version from manifest and append build number
-          $manifest = Import-PowerShellDataFile -Path ".\SPSMonday\SPSMonday.psd1"
-          $baseVersion = $manifest.ModuleVersion -replace '<ModuleVersion>', '1.0.0'
-          $version = "$baseVersion.$env:GITHUB_RUN_NUMBER"
+          # Use auto-increment versioning (will be determined by deploy.ps1)
+          Write-Host "Using auto-increment versioning (Patch bump)" -ForegroundColor Green
+          echo "DEPLOY_VERSION=auto" >> $env:GITHUB_OUTPUT
+          echo "buildVer=auto" >> $env:GITHUB_ENV
         }
-        Write-Host "Deploy Version: $version" -ForegroundColor Green
-        echo "DEPLOY_VERSION=$version" >> $env:GITHUB_OUTPUT
-        echo "buildVer=$version" >> $env:GITHUB_ENV
     
     - name: Build module for deployment
       shell: pwsh
       run: |
-        Write-Host "Building module for deployment with version: $env:buildVer" -ForegroundColor Green
-        .\build.ps1
+        if ($env:buildVer -eq "auto") {
+          Write-Host "Auto-increment versioning will be handled by deploy.ps1" -ForegroundColor Green
+        } else {
+          Write-Host "Building module for deployment with version: $env:buildVer" -ForegroundColor Green
+          .\build.ps1 -BuildVersion $env:buildVer
+        }
     
     - name: Deploy to PowerShell Gallery
       shell: pwsh
@@ -169,13 +175,22 @@ jobs:
         }
         
         Write-Host "Deploying to PowerShell Gallery..." -ForegroundColor Green
-        .\deploy.ps1 -NuGetApiKey $env:NUGET_API_KEY -BuildVersion $env:buildVer
+        if ($env:buildVer -eq "auto") {
+          # Use auto-increment (patch bump by default)
+          .\deploy.ps1 -NuGetApiKey $env:NUGET_API_KEY -VersionBump Patch
+        } else {
+          # Use specific version (for releases)
+          .\deploy.ps1 -NuGetApiKey $env:NUGET_API_KEY -BuildVersion $env:buildVer
+        }
     
     - name: Create deployment summary
       shell: pwsh
       run: |
         $moduleName = "SPSMonday"
-        $version = $env:buildVer
+        
+        # Get the actual deployed version from the manifest
+        $manifest = Test-ModuleManifest -Path ".\SPSMonday\SPSMonday.psd1"
+        $version = $manifest.Version.ToString()
         
         "## Deployment Summary" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
         "- **Module**: $moduleName" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
