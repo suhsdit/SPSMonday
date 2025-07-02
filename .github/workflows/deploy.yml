@@ -198,4 +198,4 @@ jobs:
         "Repository: PowerShell Gallery" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
         "Status: ✅ Deployed Successfully" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
         "Install Command: \`Install-Module -Name $moduleName\`" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        "Gallery Link: [View on PowerShell Gallery](https://www.powershellgallery.com/packages/$moduleName/$version)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        "GalleryLink: [View on PowerShell Gallery](https://www.powershellgallery.com/packages/$moduleName/$version)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
