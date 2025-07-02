@@ -6,7 +6,7 @@ A PowerShell module for interfacing with the Monday.com API to retrieve board da
 
 - **Board Information Retrieval**: Get comprehensive board data from your Monday.com instance
 - **Detailed Board Views**: Access detailed board information including items, columns, groups, and updates
-- **Item Management**: Retrieve and filter items (rows) from boards with comprehensive data
+- **Item Management**: Retrieve, filter, and update items (rows) from boards with comprehensive data
 - **Flexible Filtering**: Filter boards and items by various criteria (workspace, board type, state, etc.)
 - **Pipeline Support**: Seamlessly pipe objects between functions for efficient data processing
 - **Robust API Integration**: Built-in authentication, error handling, and verbose logging
@@ -19,6 +19,8 @@ A PowerShell module for interfacing with the Monday.com API to retrieve board da
 | `Get-MondayBoard` | Retrieve board information with filtering options |
 | `Get-MondayBoardDetail` | Get detailed information for a specific board |
 | `Get-MondayItem` | Retrieve items (rows) from Monday.com boards |
+| `Set-MondayBoardItem` | Update column values for Monday.com items |
+| `Get-MondayUser` | Get user information and IDs for people columns |
 | `Invoke-MondayApi` | Core API function for making authenticated requests |
 | `New-SPSMondayConfiguration` | Create new authentication configuration |
 | `Set-SPSMondayConfiguration` | Set active configuration |
@@ -73,6 +75,9 @@ Get-MondayBoardDetail -BoardId 1234567890 -IncludeItems -IncludeColumns
 
 # Get items from a board with their data
 Get-MondayItem -BoardIds @(1234567890) -IncludeColumnValues -Limit 50
+
+# Update an item's column values
+Set-MondayBoardItem -ItemId 1111111111 -ColumnValues @{ "status" = "Done"; "text" = "Updated text" }
 
 # Pipeline example: Get board details for all accessible boards
 Get-MondayBoard | Get-MondayBoardDetail -IncludeItems
@@ -140,6 +145,20 @@ Retrieves items (rows) from Monday.com boards.
 - `IncludeSubitems` - Include subitems for each item
 
 **Returns:** Array of Monday.Item objects
+
+### Set-MondayBoardItem
+
+Updates column values for a Monday.com item.
+
+**Parameters:**
+- `ItemId` - The ID of the item to update (required)
+- `BoardId` - The ID of the board containing the item (optional)
+- `ColumnValues` - Hashtable of column values to update (column ID → value)
+- `ColumnValuesJson` - JSON string containing column values (alternative to hashtable)
+- `CreateLabelsIfMissing` - Creates status/dropdown labels if missing
+- `ReturnUpdatedItem` - Return the updated item object after update
+
+**Returns:** Success message or Monday.Item object (when ReturnUpdatedItem is specified)
 
 ## Error Handling
 
@@ -219,7 +238,7 @@ A PowerShell module for interfacing with the Monday.com API, providing easy acce
 ## Features
 
 - **Board Information Retrieval**: Get comprehensive board data from your Monday.com instance
-- **Item Management**: Access items (rows) with filtering options and column data
+- **Item Management**: Access items (rows) with filtering options, column data, and update capabilities
 - **Detailed Views**: Get detailed information including columns, groups, and updates
 - **Flexible Filtering**: Filter by workspace, board type, state, and more
 - **Pipeline Support**: Seamlessly pipe objects between functions
@@ -233,6 +252,7 @@ A PowerShell module for interfacing with the Monday.com API, providing easy acce
 | `Get-MondayBoard` | Retrieve board information with filtering options |
 | `Get-MondayBoardDetail` | Get detailed information for a specific board |
 | `Get-MondayItem` | Retrieve items (rows) from boards with data |
+| `Set-MondayBoardItem` | Update column values for Monday.com items |
 | `Invoke-MondayApi` | Core API function for making authenticated GraphQL requests |
 | `New-SPSMondayConfiguration` | Create new API configuration |
 | `Set-SPSMondayConfiguration` | Activate a configuration profile |
@@ -273,6 +293,9 @@ Get-MondayBoardDetail -BoardId 1234567890 -IncludeItems -IncludeColumns
 
 # Get items from a board with their data
 Get-MondayItem -BoardIds @(1234567890) -IncludeColumnValues
+
+# Update item column values
+Set-MondayBoardItem -ItemId 1111111111 -ColumnValues @{ "status" = "Done"; "text" = "Updated" }
 
 # Pipeline example: Get board details for all boards
 Get-MondayBoard | Get-MondayBoardDetail -IncludeItems
@@ -381,6 +404,20 @@ Retrieves items (rows) from boards.
 
 **Returns:** Array of Monday.Item objects
 
+### Set-MondayBoardItem
+
+Updates column values for Monday.com items.
+
+**Parameters:**
+- `ItemId` - The ID of the item to update (required, supports pipeline input)
+- `BoardId` - The ID of the board containing the item (optional)
+- `ColumnValues` - Hashtable of column values to update (column ID → value)
+- `ColumnValuesJson` - JSON string containing column values (alternative to hashtable)
+- `CreateLabelsIfMissing` - Creates status/dropdown labels if missing
+- `ReturnUpdatedItem` - Return the updated item object after update
+
+**Returns:** Success message or Monday.Item object (when ReturnUpdatedItem is specified)
+
 ## Advanced Examples
 
 ### Working with Board Data
@@ -409,6 +446,19 @@ $urgentItems = $items | Where-Object { $_.name -like "*Urgent*" }
 $statusValues = $items | ForEach-Object { 
     $_.column_values | Where-Object { $_.column.title -eq "Status" } 
 }
+
+# Update multiple items with new status
+$items | ForEach-Object { 
+    Set-MondayBoardItem -ItemId $_.id -ColumnValues @{ "status" = "Reviewed" } 
+}
+
+# Update an item with multiple column values
+Set-MondayBoardItem -ItemId 1234567890 -ColumnValues @{
+    "status" = "In Progress"
+    "date" = "2025-07-15"  
+    "numbers" = 42
+    "text" = "Updated via PowerShell"
+} -ReturnUpdatedItem
 ```
 
 ### Pipeline Operations
