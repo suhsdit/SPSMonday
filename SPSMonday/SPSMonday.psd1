@@ -30,7 +30,7 @@ CompanyName = 'Jesse Geron'
 Copyright = '(c) Jesse Geron. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'This module is used to interact with the Monday.com API for retrieving board data and managing Monday.com workflows.'
+Description = 'This module is used to interact with the Monday.com API for retrieving board data, managing Monday.com workflows, and managing board structure including columns.'
 
 # Minimum version of the PowerShell engine required by this module
 PowerShellVersion = '5.1'
@@ -78,6 +78,10 @@ FunctionsToExport = @(  'Get-MondayBoard',
                         'New-MondayBoardItem',
                         'Set-MondayBoardItem',
                         'Remove-MondayBoardItem',
+                        'New-MondayBoardColumn',
+                        'Remove-MondayBoardColumn',
+                        'Set-MondayBoardColumnTitle',
+                        'Set-MondayBoardColumnMetadata',
                         'Invoke-MondayApi',
                         'New-SPSMondayConfiguration',
                         'Set-SPSMondayConfiguration',
@@ -120,7 +124,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Initial release of SPSMonday module for Monday.com API integration'
+        ReleaseNotes = 'Version 1.1.0: Added column management functions - New-MondayBoardColumn, Remove-MondayBoardColumn, Set-MondayBoardColumnTitle, and Set-MondayBoardColumnMetadata for complete board structure management'
 
         # Prerelease string of this module
         # Prerelease = ''
@@ -142,6 +146,9 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
+
+
+
 
 
 
