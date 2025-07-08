@@ -9,7 +9,7 @@ Function Set-MondayBoardItem {
 .PARAMETER ItemId
     The ID of the item to update
 .PARAMETER BoardId
-    The ID of the board containing the item (required for some API operations)
+    The ID of the board containing the item (required for API operations)
 .PARAMETER ColumnValues
     Hashtable of column values to update. Keys should be column IDs, values should be the data for that column.
     The value format depends on the column type (see Monday.com column types documentation).
@@ -21,7 +21,7 @@ Function Set-MondayBoardItem {
 .PARAMETER ReturnUpdatedItem
     Return the updated item object after the update operation
 .EXAMPLE
-    Set-MondayBoardItem -ItemId 1234567890 -ColumnValues @{ "status" = "Done"; "text" = "Updated text" }
+    Set-MondayBoardItem -ItemId 1234567890 -BoardId 9876543210 -ColumnValues @{ "status" = "Done"; "text" = "Updated text" }
     
     Updates the status and text columns for the specified item
 .EXAMPLE
@@ -31,17 +31,17 @@ Function Set-MondayBoardItem {
         "numbers" = 42
         "text" = "Updated via PowerShell"
     }
-    Set-MondayBoardItem -ItemId 1234567890 -ColumnValues $columnData -ReturnUpdatedItem
+    Set-MondayBoardItem -ItemId 1234567890 -BoardId 9876543210 -ColumnValues $columnData -ReturnUpdatedItem
     
     Updates multiple columns and returns the updated item
 .EXAMPLE
     $jsonData = '{"status":{"label":"Done"},"date":"2025-07-15","text":"Updated text"}'
-    Set-MondayBoardItem -ItemId 1234567890 -ColumnValuesJson $jsonData
+    Set-MondayBoardItem -ItemId 1234567890 -BoardId 9876543210 -ColumnValuesJson $jsonData
     
     Updates columns using pre-formatted JSON
 .EXAMPLE
     Get-MondayBoardItem -BoardIds @(1234567890) | ForEach-Object { 
-        Set-MondayBoardItem -ItemId $_.id -ColumnValues @{ "status" = "Reviewed" } 
+        Set-MondayBoardItem -ItemId $_.id -BoardId $_.board.id -ColumnValues @{ "status" = "Reviewed" } 
     }
     
     Pipeline example: Updates the status column for all items in a board
@@ -76,7 +76,7 @@ Function Set-MondayBoardItem {
         [Alias('Id')]
         [Int64]$ItemId,
         
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$true)]
         [Int64]$BoardId,
         
         [Parameter(Mandatory=$true, ParameterSetName = 'Hashtable')]
@@ -113,21 +113,47 @@ Function Set-MondayBoardItem {
                 foreach ($columnId in $ColumnValues.Keys) {
                     $value = $ColumnValues[$columnId]
                     Write-Verbose -Message "Processing column '$columnId' with value: $value"
+                    Write-Verbose -Message "DEBUG: Value type is: $($value.GetType().Name)"
                     
                     # Handle different value types appropriately with smart detection
                     if ($value -is [string]) {
+                        Write-Verbose -Message "DEBUG: Processing string value for column '$columnId'"
                         # For string values, apply smart formatting based on column ID patterns
-                        if ($columnId -match "^(status|dropdown)" -and $columnId -notmatch "^(text|date|number)") {
-                            # For status columns, wrap in label object
+                        # Check for status/dropdown columns more precisely
+                        $isStatusColumn = $false
+                        
+                        if ($columnId -eq "status" -or $columnId -eq "dropdown") {
+                            $isStatusColumn = $true
+                            Write-Verbose -Message "DEBUG: Matched exact status/dropdown pattern"
+                        }
+                        elseif ($columnId -match "^(status|dropdown)_") {
+                            $isStatusColumn = $true
+                            Write-Verbose -Message "DEBUG: Matched start with status/dropdown pattern"
+                        }
+                        elseif ($columnId -match "_(status|dropdown)$") {
+                            $isStatusColumn = $true
+                            Write-Verbose -Message "DEBUG: Matched end with status/dropdown pattern"
+                        }
+                        else {
+                            Write-Verbose -Message "DEBUG: No status/dropdown pattern matched"
+                        }
+                        
+                        Write-Verbose -Message "DEBUG: Column '$columnId' is status column: $isStatusColumn"
+                        
+                        if ($isStatusColumn) {
+                            # For status/dropdown columns, wrap in label object
                             $jsonObject[$columnId] = @{ "label" = $value }
+                            Write-Verbose -Message "DEBUG: Applied label wrapping"
                         } 
                         elseif ($columnId -match "date" -and $value -match "^\d{4}-\d{2}-\d{2}$") {
                             # For date columns with ISO date format, use as-is
                             $jsonObject[$columnId] = $value
+                            Write-Verbose -Message "DEBUG: Applied date formatting"
                         }
                         else {
                             # For other string columns (text, etc.)
                             $jsonObject[$columnId] = $value
+                            Write-Verbose -Message "DEBUG: Applied plain string formatting"
                         }
                     }
                     elseif ($value -is [datetime]) {
@@ -175,13 +201,11 @@ Function Set-MondayBoardItem {
             # Build the mutation arguments
             $mutationArgs = @(
                 "item_id: $ItemId"
+                "board_id: $BoardId"
                 "column_values: `"$escapedJson`""
             )
             
-            if ($BoardId) {
-                $mutationArgs += "board_id: $BoardId"
-                Write-Verbose -Message "Including board ID: $BoardId"
-            }
+            Write-Verbose -Message "Including board ID: $BoardId"
             
             if ($CreateLabelsIfMissing) {
                 $mutationArgs += "create_labels_if_missing: true"

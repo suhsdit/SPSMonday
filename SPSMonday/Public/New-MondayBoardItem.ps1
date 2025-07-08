@@ -123,8 +123,21 @@ Function New-MondayBoardItem {
                     # Handle different value types appropriately with smart detection
                     if ($value -is [string]) {
                         # For string values, apply smart formatting based on column ID patterns
-                        if ($columnId -match "(status|dropdown)") {
-                            # For status columns, wrap in label object
+                        # Check for status/dropdown columns more precisely
+                        $isStatusColumn = $false
+                        
+                        if ($columnId -eq "status" -or $columnId -eq "dropdown") {
+                            $isStatusColumn = $true
+                        }
+                        elseif ($columnId -match "^(status|dropdown)_") {
+                            $isStatusColumn = $true
+                        }
+                        elseif ($columnId -match "_(status|dropdown)$") {
+                            $isStatusColumn = $true
+                        }
+                        
+                        if ($isStatusColumn) {
+                            # For status/dropdown columns, wrap in label object
                             $jsonObject[$columnId] = @{ "label" = $value }
                         } 
                         elseif ($columnId -match "date" -and $value -match "^\d{4}-\d{2}-\d{2}$") {
