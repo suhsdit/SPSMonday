@@ -1,13 +1,13 @@
 Function Get-MondayBoardItem {
 <#
 .SYNOPSIS
-    Get all items from a Monday.com board
+    Get items from a Monday.com board
 .DESCRIPTION
-    This function retrieves all items (rows) from a specific Monday.com board.
-    It provides a PowerShell-idiomatic way to get board items without having to 
-    drill down into nested objects from Get-MondayBoardDetail.
+    This function retrieves items (rows) from a specific Monday.com board. You can retrieve all items, or specify one or more ItemIds to fetch only those items from the board.
 .PARAMETER BoardId
     The ID of the board to retrieve items from
+.PARAMETER ItemIds
+    Optional. Array of specific item IDs to retrieve from the board. If not specified, all items are retrieved.
 .PARAMETER IncludeColumnValues
     Include column values (data) for each item. This shows the actual data stored in each cell.
 .PARAMETER IncludeUpdates
@@ -31,6 +31,14 @@ Function Get-MondayBoardItem {
     
     Gets all items from the board including their column data
 .EXAMPLE
+    Get-MondayBoardItem -BoardId 1234567890 -ItemIds 1111111111
+    
+    Gets a specific item from the board by its ID
+.EXAMPLE
+    Get-MondayBoardItem -BoardId 1234567890 -ItemIds 1111111111,2222222222 -IncludeColumnValues
+    
+    Gets specific items by their IDs from the board, including their column values
+.EXAMPLE
     Get-MondayBoardItem -BoardId 1234567890 -GroupIds @("group1", "group2") -IncludeColumnValues
     
     Gets items from specific groups within the board, including their data
@@ -47,12 +55,8 @@ Function Get-MondayBoardItem {
 .OUTPUTS
     Monday.BoardItem[]
 .NOTES
-    This function is designed to be more PowerShell-idiomatic than using Get-MondayItem 
-    or drilling into Get-MondayBoardDetail results. It focuses specifically on getting 
-    items from a single board in a straightforward manner.
-    
-    When using -AllItems on very large boards, the function will make multiple API calls
-    to retrieve all items using pagination.
+    If you specify -ItemIds, only those items will be returned (if they belong to the specified board). If not specified, all items are returned (with optional filters).
+    When using -AllItems on very large boards, the function will make multiple API calls to retrieve all items using pagination.
 .LINK
     https://developer.monday.com/api-reference/reference/items
 #>
@@ -64,6 +68,9 @@ Function Get-MondayBoardItem {
             Position=0)]
         [Alias('Id')]
         [Int64]$BoardId,
+        
+        [Parameter(Mandatory=$false)]
+        [Int64[]]$ItemIds,
         
         [Parameter(Mandatory=$false)]
         [Switch]$IncludeColumnValues,
@@ -148,6 +155,35 @@ Function Get-MondayBoardItem {
             }
             
             $fieldString = $fields -join ' '
+            
+            if ($ItemIds) {
+                # Query specific items by ID, but only those that belong to this board
+                $itemIdList = ($ItemIds | ForEach-Object { $_ }) -join ', '
+                $query = "query { items (ids: [$itemIdList]) { $fieldString board { id } } }"
+                Write-Verbose -Message "Querying items by IDs: $itemIdList"
+                $response = Invoke-MondayApi -Query $query
+                if ($response.items) {
+                    # Filter to only items that belong to the specified board
+                    $items = $response.items | Where-Object { $_.board.id -eq $BoardId }
+                    # Add type info
+                    foreach ($item in $items) {
+                        $item.PSObject.TypeNames.Insert(0, 'Monday.BoardItem')
+                    }
+                    if ($GroupIds) {
+                        $items = $items | Where-Object { $_.group.id -in $GroupIds }
+                        Write-Verbose -Message "Applied group filtering for groups: $($GroupIds -join ', ')"
+                    }
+                    if ($State -ne 'all') {
+                        $items = $items | Where-Object { $_.state -eq $State }
+                    }
+                    Write-Verbose -Message "Retrieved $($items.Count) items by ItemIds from board $BoardId"
+                    return $items
+                } else {
+                    Write-Verbose -Message "No items found for specified ItemIds on board $BoardId"
+                    return @()
+                }
+            }
+            
             $collectedItems = @()
             $cursor = $null
             $currentPage = 1
