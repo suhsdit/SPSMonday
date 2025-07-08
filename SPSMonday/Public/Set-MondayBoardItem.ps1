@@ -117,7 +117,7 @@ Function Set-MondayBoardItem {
                     # Handle different value types appropriately with smart detection
                     if ($value -is [string]) {
                         # For string values, apply smart formatting based on column ID patterns
-                        if ($columnId -match "(status|dropdown)") {
+                        if ($columnId -match "^(status|dropdown)" -and $columnId -notmatch "^(text|date|number)") {
                             # For status columns, wrap in label object
                             $jsonObject[$columnId] = @{ "label" = $value }
                         } 
