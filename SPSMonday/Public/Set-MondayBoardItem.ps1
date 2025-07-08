@@ -40,7 +40,7 @@ Function Set-MondayBoardItem {
     
     Updates columns using pre-formatted JSON
 .EXAMPLE
-    Get-MondayItem -BoardIds @(1234567890) | ForEach-Object { 
+    Get-MondayBoardItem -BoardIds @(1234567890) | ForEach-Object { 
         Set-MondayBoardItem -ItemId $_.id -ColumnValues @{ "status" = "Reviewed" } 
     }
     

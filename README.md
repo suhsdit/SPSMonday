@@ -18,7 +18,7 @@ A PowerShell module for interfacing with the Monday.com API to retrieve board da
 |----------|-------------|
 | `Get-MondayBoard` | Retrieve board information with filtering options |
 | `Get-MondayBoardDetail` | Get detailed information for a specific board |
-| `Get-MondayItem` | Retrieve items (rows) from Monday.com boards |
+| `Get-MondayBoardItem` | Retrieve items (rows) from Monday.com boards |
 | `Set-MondayBoardItem` | Update column values for Monday.com items |
 | `Get-MondayUser` | Get user information and IDs for people columns |
 | `Invoke-MondayApi` | Core API function for making authenticated requests |
@@ -74,7 +74,7 @@ Get-MondayBoard -BoardKind public -Limit 20
 Get-MondayBoardDetail -BoardId 1234567890 -IncludeItems -IncludeColumns
 
 # Get items from a board with their data
-Get-MondayItem -BoardIds @(1234567890) -IncludeColumnValues -Limit 50
+Get-MondayBoardItem -BoardIds @(1234567890) -IncludeColumnValues -Limit 50
 
 # Update an item's column values
 Set-MondayBoardItem -ItemId 1111111111 -ColumnValues @{ "status" = "Done"; "text" = "Updated text" }
@@ -132,7 +132,7 @@ Gets detailed information about a specific Monday.com board.
 
 **Returns:** Monday.BoardDetail object
 
-### Get-MondayItem
+### Get-MondayBoardItem
 
 Retrieves items (rows) from Monday.com boards.
 
@@ -183,7 +183,7 @@ For boards with many items, use pagination:
 # Get items in batches
 $allItems = @()
 for ($page = 1; $page -le 5; $page++) {
-    $items = Get-MondayItem -BoardIds @(1234567890) -Page $page -Limit 100 -IncludeColumnValues
+    $items = Get-MondayBoardItem -BoardIds @(1234567890) -Page $page -Limit 100 -IncludeColumnValues
     $allItems += $items
     Write-Host "Retrieved page $page with $($items.Count) items"
 }
@@ -197,7 +197,7 @@ Get-MondayBoard -State active |
     Where-Object { $_.items_count -gt 0 } | 
     ForEach-Object {
         Write-Host "Processing board: $($_.name)"
-        Get-MondayItem -BoardIds @($_.id) -IncludeColumnValues
+        Get-MondayBoardItem -BoardIds @($_.id) -IncludeColumnValues
     }
 ```
 
@@ -251,7 +251,7 @@ A PowerShell module for interfacing with the Monday.com API, providing easy acce
 |----------|-------------|
 | `Get-MondayBoard` | Retrieve board information with filtering options |
 | `Get-MondayBoardDetail` | Get detailed information for a specific board |
-| `Get-MondayItem` | Retrieve items (rows) from boards with data |
+| `Get-MondayBoardItem` | Retrieve items (rows) from boards with data |
 | `Set-MondayBoardItem` | Update column values for Monday.com items |
 | `Invoke-MondayApi` | Core API function for making authenticated GraphQL requests |
 | `New-SPSMondayConfiguration` | Create new API configuration |
@@ -292,7 +292,7 @@ Get-MondayBoard -BoardKind public
 Get-MondayBoardDetail -BoardId 1234567890 -IncludeItems -IncludeColumns
 
 # Get items from a board with their data
-Get-MondayItem -BoardIds @(1234567890) -IncludeColumnValues
+Get-MondayBoardItem -BoardIds @(1234567890) -IncludeColumnValues
 
 # Update item column values
 Set-MondayBoardItem -ItemId 1111111111 -ColumnValues @{ "status" = "Done"; "text" = "Updated" }
@@ -387,7 +387,7 @@ Retrieves detailed information about a specific board.
 
 **Returns:** Monday.BoardDetail object
 
-### Get-MondayItem
+### Get-MondayBoardItem
 
 Retrieves items (rows) from boards.
 
@@ -437,7 +437,7 @@ $boardDetails = $projectBoards | Get-MondayBoardDetail -IncludeItems -IncludeCol
 
 ```powershell
 # Get all items from a specific board with their data
-$items = Get-MondayItem -BoardIds @(1234567890) -IncludeColumnValues
+$items = Get-MondayBoardItem -BoardIds @(1234567890) -IncludeColumnValues
 
 # Find items by name
 $urgentItems = $items | Where-Object { $_.name -like "*Urgent*" }
@@ -466,7 +466,7 @@ Set-MondayBoardItem -ItemId 1234567890 -ColumnValues @{
 ```powershell
 # Get items from all boards in a workspace
 Get-MondayBoard -WorkspaceIds @(12345) | 
-    ForEach-Object { Get-MondayItem -BoardIds @($_.id) -IncludeColumnValues }
+    ForEach-Object { Get-MondayBoardItem -BoardIds @($_.id) -IncludeColumnValues }
 
 # Get detailed information for boards with many items
 Get-MondayBoard | 

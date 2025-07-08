@@ -94,7 +94,7 @@ if ($TestBasicFunctions) {
     }
     
     # Test other functions
-    $functionTests = @('Get-MondayBoard', 'Get-MondayBoardDetail', 'Get-MondayItem')
+    $functionTests = @('Get-MondayBoard', 'Get-MondayBoardDetail', 'Get-MondayBoardItem')
     foreach ($func in $functionTests) {
         Write-Host "  Testing $func..." -ForegroundColor Gray
         try {
